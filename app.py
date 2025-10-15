@@ -40,7 +40,19 @@ except Exception as e:
     st.stop()
 
 # Prepare merge keys
+# Prepare merge keys (robust handling)
+code_col = None
+for c in geo.columns:
+    if "SA2_CODE" in c:
+        code_col = c
+        break
+if not code_col:
+    st.error(f"GeoJSON columns: {list(geo.columns)} — could not find SA2 code column.")
+    st.stop()
+
+geo = geo.rename(columns={code_col: "SA2_CODE21"})
 geo["SA2_CODE21"] = geo["SA2_CODE21"].astype(str)
+
 own["sa2_code21"] = own.get("sa2_code21", pd.Series(dtype=str)).astype(str)
 seifa["sa2_code21"] = seifa.get("sa2_code21", pd.Series(dtype=str)).astype(str)
 vac["sa2_code21"] = vac.get("sa2_code21", pd.Series(dtype=str)).astype(str)
