@@ -41,9 +41,10 @@ except Exception as e:
 
 # Prepare merge keys
 # Prepare merge keys (robust handling)
+# Prepare merge keys (robust handling)
 code_col = None
 for c in geo.columns:
-    if "SA2_CODE" in c:
+    if "sa2_code" in c.lower():
         code_col = c
         break
 if not code_col:
@@ -52,6 +53,8 @@ if not code_col:
 
 geo = geo.rename(columns={code_col: "SA2_CODE21"})
 geo["SA2_CODE21"] = geo["SA2_CODE21"].astype(str)
+
+
 
 own["sa2_code21"] = own.get("sa2_code21", pd.Series(dtype=str)).astype(str)
 seifa["sa2_code21"] = seifa.get("sa2_code21", pd.Series(dtype=str)).astype(str)
