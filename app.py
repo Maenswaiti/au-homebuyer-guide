@@ -13,7 +13,7 @@ st.write("Explore housing affordability, ownership, and vacancy by SA2 region.")
 # --- Load datasets ---
 st.write("Fetching SA2 boundaries...")
 
-geo_path = "data/sa2_boundaries.geojson"
+geo_path = "geometry/sa2_boundaries.geojson"
 own_path = "data/ownership.csv"
 seifa_path = "data/seifa.csv"
 vac_path = "data/vacancy.csv"
