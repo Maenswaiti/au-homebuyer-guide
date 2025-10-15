@@ -1,7 +1,4 @@
 gdal-bin
-gdal-data
 libgdal-dev
-proj-bin
-libproj-dev
-libspatialindex-dev
-libspatialindex6
+python3-gdal
+
