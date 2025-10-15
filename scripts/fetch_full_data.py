@@ -20,9 +20,14 @@ def http_get(url, timeout=30):
         raise RuntimeError(f"GET failed {url} -> {e}")
 
 def fetch_sa2_boundaries():
-    local_path = os.path.join(GEO_PATH, "sa2_2021_simplified.geojson")
+    import requests, os
+    SA2_GEOJSON_URL = "https://www.abs.gov.au/statistics/standards/australian-statistical-geography-standard-asgs-edition-3/jul2021-jun2026/gda94/sa2_2021_aust_simple.geojson"
+    local_path = "geometry/sa2_2021_simplified.geojson"
+    os.makedirs("geometry", exist_ok=True)
     try:
-        r = http_get(SA2_GEOJSON_URL)
+        print("Fetching SA2 boundaries from ABS...")
+        r = requests.get(SA2_GEOJSON_URL, timeout=60)
+        r.raise_for_status()
         with open(local_path, "wb") as f:
             f.write(r.content)
         print("✅ SA2 boundaries downloaded successfully.")
@@ -30,7 +35,8 @@ def fetch_sa2_boundaries():
         if os.path.exists(local_path):
             print(f"⚠️ Using cached SA2 boundaries due to: {e}")
         else:
-            raise RuntimeError(f"Failed to fetch SA2 GeoJSON: {e}")
+            raise RuntimeError(f"Failed to fetch SA2 boundaries: {e}")
+
 
 def fetch_all_datasets():
     """Fetch multiple open datasets and save them locally."""
