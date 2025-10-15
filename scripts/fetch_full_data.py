@@ -15,7 +15,7 @@ def fetch_sa2_boundaries():
     local_geo = os.path.join(GEO_PATH, "sa2_2021_simplified.geojson")
     params = {
         "where": "1=1",
-        "outFields": "SA2_CODE_2021,SA2_NAME_2021",
+        "outFields": "sa2_code_2021,sa2_name_2021",
         "f": "geojson"
     }
     try:
@@ -40,7 +40,7 @@ def fetch_ownership_from_abs():
     while True:
         params = {
             "where": "1=1",
-            "outFields": "SA2_CODE_2021,O_Tot,O_Mortgage,O_Owned",
+            "outFields": "*",
             "returnGeometry": "false",
             "f": "json",
             "resultOffset": offset,
@@ -54,15 +54,25 @@ def fetch_ownership_from_abs():
             break
         for ft in feats:
             a = ft["attributes"]
+            # Flexible field name detection
+            code = a.get("SA2_CODE_2021") or a.get("sa2_code_2021")
+            tot = a.get("O_Tot") or a.get("Tot") or a.get("Owned_Total") or a.get("Total")
+            mort = a.get("O_Mortgage") or a.get("Owned_w_Mortgage") or a.get("Mortgage")
+            own = a.get("O_Owned") or a.get("Owned_outright") or a.get("Owned")
+            if not code:
+                continue
             rows.append({
-                "sa2_code21": str(a.get("SA2_CODE_2021")),
-                "o_tot": a.get("O_Tot"),
-                "o_mortgage": a.get("O_Mortgage"),
-                "o_owned": a.get("O_Owned"),
+                "sa2_code21": str(code),
+                "o_tot": tot,
+                "o_mortgage": mort,
+                "o_owned": own,
             })
         offset += len(feats)
         if len(feats) < page_size:
             break
+
+    if not rows:
+        raise RuntimeError("No ownership data retrieved from ABS")
 
     df = pd.DataFrame(rows)
     df["ownership_pct"] = ((df["o_mortgage"].fillna(0) + df["o_owned"].fillna(0))
@@ -74,7 +84,4 @@ def fetch_ownership_from_abs():
 def fetch_all_datasets():
     fetch_sa2_boundaries()
     fetch_ownership_from_abs()
-    # You should provide your own CSVs for these or replace URLs accordingly:
-    # e.g. fetch a SEIFA CSV, vacancy CSV, and median price CSV.
-    # For now, skip or leave local sample if they exist.
     print("✅ fetch_all_datasets done.")
