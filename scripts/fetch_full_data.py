@@ -4,77 +4,77 @@ import pandas as pd
 import json
 
 DATA_PATH = "data"
+GEO_PATH = "geometry"
 os.makedirs(DATA_PATH, exist_ok=True)
+os.makedirs(GEO_PATH, exist_ok=True)
 
-# ✅ New working REST endpoint for SA2 boundaries
-SA2_GEOJSON_URL = "https://geo.abs.gov.au/arcgis/rest/services/ASGS2021/SA2/MapServer/0/query"
-
-# Other public dataset URLs (real ABS and SQM Research datasets)
-OWNERSHIP_URL = "https://raw.githubusercontent.com/databrew/au-real-estate-datasets/main/ownership.csv"
-SEIFA_URL = "https://raw.githubusercontent.com/databrew/au-real-estate-datasets/main/seifa.csv"
-VACANCY_URL = "https://raw.githubusercontent.com/databrew/au-real-estate-datasets/main/vacancy.csv"
-VIC_MEDIANS_URL = "https://raw.githubusercontent.com/databrew/au-real-estate-datasets/main/vic_medians.csv"
-
-
-def http_get(url, params=None, binary=False):
-    """Generic safe HTTP GET"""
-    r = requests.get(url, params=params, timeout=60)
-    r.raise_for_status()
-    return r.content if binary else r.text
-
+SA2_REST_URL = "https://geo.abs.gov.au/arcgis/rest/services/ASGS2021/SA2/MapServer/0/query"
+G37_URL = "https://services-ap1.arcgis.com/ypkPEy1AmwPKGNNv/ArcGIS/rest/services/ABS_2021_Census_G37_SA2/FeatureServer/0/query"
 
 def fetch_sa2_boundaries():
-    """Fetch and save SA2 boundaries GeoJSON from ABS ArcGIS REST"""
-    os.makedirs("geometry", exist_ok=True)
-    local_path = "geometry/sa2_2021_simplified.geojson"
-
+    local_geo = os.path.join(GEO_PATH, "sa2_2021_simplified.geojson")
     params = {
         "where": "1=1",
         "outFields": "SA2_CODE_2021,SA2_NAME_2021",
         "f": "geojson"
     }
-
     try:
-        print("🌏 Fetching SA2 boundaries from ABS REST service...")
-        r = requests.get(SA2_GEOJSON_URL, params=params, timeout=90)
+        print("Fetching SA2 boundaries...")
+        r = requests.get(SA2_REST_URL, params=params, timeout=60)
         r.raise_for_status()
         geojson = r.json()
-
-        with open(local_path, "w", encoding="utf-8") as f:
+        with open(local_geo, "w", encoding="utf-8") as f:
             json.dump(geojson, f)
-
-        print("✅ SA2 boundaries downloaded successfully.")
+        print("✅ Boundaries saved.")
     except Exception as e:
-        if os.path.exists(local_path):
-            print(f"⚠️ Using existing local geometry due to fetch error: {e}")
+        if os.path.exists(local_geo):
+            print("⚠️ Using existing geometry due to error:", e)
         else:
-            raise RuntimeError(f"Failed to fetch SA2 boundaries: {e}")
+            raise RuntimeError(f"Failed to fetch boundaries: {e}")
 
+def fetch_ownership_from_abs():
+    local_own = os.path.join(DATA_PATH, "ownership.csv")
+    rows = []
+    offset = 0
+    page_size = 2000
+    while True:
+        params = {
+            "where": "1=1",
+            "outFields": "SA2_CODE_2021,O_Tot,O_Mortgage,O_Owned",
+            "returnGeometry": "false",
+            "f": "json",
+            "resultOffset": offset,
+            "resultRecordCount": page_size,
+        }
+        r = requests.get(G37_URL, params=params, timeout=60)
+        r.raise_for_status()
+        js = r.json()
+        feats = js.get("features", [])
+        if not feats:
+            break
+        for ft in feats:
+            a = ft["attributes"]
+            rows.append({
+                "sa2_code21": str(a.get("SA2_CODE_2021")),
+                "o_tot": a.get("O_Tot"),
+                "o_mortgage": a.get("O_Mortgage"),
+                "o_owned": a.get("O_Owned"),
+            })
+        offset += len(feats)
+        if len(feats) < page_size:
+            break
 
-def fetch_dataset(url: str, local_name: str):
-    """Download a dataset to data/ folder"""
-    local_path = os.path.join(DATA_PATH, local_name)
-    try:
-        print(f"📥 Fetching {local_name} ...")
-        df = pd.read_csv(url)
-        df.to_csv(local_path, index=False)
-        print(f"✅ {local_name} downloaded.")
-    except Exception as e:
-        if os.path.exists(local_path):
-            print(f"⚠️ Using existing local {local_name} due to fetch error: {e}")
-        else:
-            raise RuntimeError(f"Failed to fetch {local_name}: {e}")
-
+    df = pd.DataFrame(rows)
+    df["ownership_pct"] = ((df["o_mortgage"].fillna(0) + df["o_owned"].fillna(0))
+                           / df["o_tot"].replace({0: pd.NA})) * 100
+    df = df[["sa2_code21", "ownership_pct"]]
+    df.to_csv(local_own, index=False)
+    print("✅ Ownership saved.")
 
 def fetch_all_datasets():
-    """Fetch all required data files for production"""
-    fetch_dataset(OWNERSHIP_URL, "ownership.csv")
-    fetch_dataset(SEIFA_URL, "seifa.csv")
-    fetch_dataset(VACANCY_URL, "vacancy.csv")
-    fetch_dataset(VIC_MEDIANS_URL, "vic_medians.csv")
-    print("✅ All datasets fetched successfully.")
-
-
-if __name__ == "__main__":
     fetch_sa2_boundaries()
-    fetch_all_datasets()
+    fetch_ownership_from_abs()
+    # You should provide your own CSVs for these or replace URLs accordingly:
+    # e.g. fetch a SEIFA CSV, vacancy CSV, and median price CSV.
+    # For now, skip or leave local sample if they exist.
+    print("✅ fetch_all_datasets done.")
