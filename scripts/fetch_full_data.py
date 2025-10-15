@@ -8,7 +8,7 @@ GEO_PATH = "geometry"
 os.makedirs(DATA_PATH, exist_ok=True)
 os.makedirs(GEO_PATH, exist_ok=True)
 
-SA2_GEOJSON_URL = "https://www.abs.gov.au/statistics/standards/australian-statistical-geography-standard-asgs-edition-3/jul2021-jun2026/gda94/sa2_2021_aust_simple.geojson"
+SA2_GEOJSON_URL = "https://www.abs.gov.au/statistics/standards/australian-statistical-geography-standard-asgs-edition-3/jul2021-jun2026/digital-boundary-files/sa2_2021_aust_simple.geojson"
 
 def http_get(url, timeout=30):
     """Generic GET request with error handling."""
@@ -21,7 +21,7 @@ def http_get(url, timeout=30):
 
 def fetch_sa2_boundaries():
     import requests, os
-    SA2_GEOJSON_URL = "https://www.abs.gov.au/statistics/standards/australian-statistical-geography-standard-asgs-edition-3/jul2021-jun2026/gda94/sa2_2021_aust_simple.geojson"
+    SA2_GEOJSON_URL = "https://www.abs.gov.au/statistics/standards/australian-statistical-geography-standard-asgs-edition-3/jul2021-jun2026/digital-boundary-files/sa2_2021_aust_simple.geojson"
     local_path = "geometry/sa2_2021_simplified.geojson"
     os.makedirs("geometry", exist_ok=True)
     try:
